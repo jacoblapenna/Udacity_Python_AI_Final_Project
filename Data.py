@@ -42,6 +42,13 @@ class Data:
         self.trainloader = torch.utils.data.DataLoader(self._train_data, batch_size=32)
         self.testloader = torch.utils.data.DataLoader(self._test_data, batch_size=32)
         self.valloader= torch.utils.data.DataLoader(self._validation_data, batch_size=32)
+        
+        # helper variables
+        self.n_outputs = len(self._train_data.class_to_idx.items())
+    
+    
+    def set_index_to_label(self, class_to_idx):
+        self._index_to_label = {v : k for k, v in class_to_idx.items()}
     
        
     def get_name(self, label=None, index=None):
@@ -56,10 +63,12 @@ class Data:
     
     
     def get_random_test_image(self):
-        return choice(self._test_data)
+        image_tensor, image_index = choice(self._test_data)
+        image_tensor.unsqueeze_(0)        
+        return image_tensor, image_index
     
     
     def get_image_from_path(self, path):
-        image_tensor = self._test_transforms(Image.open(path)).unsqueeze_(0)
+        image_tensor = self._test_transforms(Image.open(path)).unsqueeze(0)
         image_index = self._test_data.class_to_idx[path.split('/')[-2]]
-        return (image_tensor, image_index)
+        return image_tensor, image_index

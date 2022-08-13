@@ -19,11 +19,14 @@ parser.add_argument("-g", "--gpu", type=bool,
 # parse arguments
 args = parser.parse_args()
 
-# manager directory
+# manage paths
 cwd = os.getcwd()
 root_dir = cwd + "/flowers"
+
+# create Data instance
 data = Data(root_dir)
 
+# get image and classifier
 if args.impath:
     if root_dir in args.impath:
         image_path = args.impath
@@ -33,4 +36,45 @@ if args.impath:
 else:
     image, idx = data.get_random_test_image()
 
-print(idx, data.get_name(index=idx))
+# get label
+label = data.get_name(index=idx)
+
+# load model on best available device and set to eval mode
+# map device location
+if torch.cuda.is_available():
+    map_location = lambda memory, location: memory.cuda()
+else:
+    map_location = "cpu"
+# load model
+model = torch.load(args.model, map_location=map_location)
+
+# classify
+with torch.no_grad():
+    model.eval() # prevent dropout
+    log_ps = model.forward(image)
+    ps = torch.exp(log_ps)
+
+# get topk
+if args.top_k:
+    top_probs, top_classes = ps.topk(args.top_k, dim=1)
+else:
+    top_probs, top_classes = ps.topk(1, dim=1)
+# process topk
+top_probs, top_classes = top_probs.tolist()[0], top_classes.tolist()[0]
+# get top names from top classes
+if model.cat_to_idx:
+    data.set_index_to_label(model.cat_to_idx)
+top_names = [data.get_name(index=cls) for cls in top_classes]
+
+# inform user of results
+roundl = lambda x: round(x, 3)
+if args.top_k and args.top_k > 1:
+    print(f"The top {args.top_k} probabilities are: {map(roundl, top_probs)}, which correspond to the following flowers: {top_names}")
+else:
+    print(f"The flower was classified as {top_names[0]} with {roundl(top_probs[0])} probability.")
+success_string = f"The actual flower was labeled {label}, "
+if label == top_names[0]:
+    success_string += f"which matches the highest probability classification of {top_names[0]}."
+else:
+    success_string += f"which does NOT match the highest probability classification of {top_names[0]}."
+print(success_string)
