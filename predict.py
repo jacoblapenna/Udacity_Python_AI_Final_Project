@@ -26,6 +26,12 @@ root_dir = cwd + "/flowers"
 # create Data instance
 data = Data(root_dir)
 
+# get device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+# soft max
+output = torch.nn.LogSoftmax(dim=1)
+
 # get image and classifier
 if args.impath:
     if root_dir in args.impath:
@@ -35,6 +41,7 @@ if args.impath:
     image, idx = data.get_image_from_path(image_path)
 else:
     image, idx = data.get_random_test_image()
+image = image.to(device)
 
 # get label
 label = data.get_name(index=idx)
@@ -48,10 +55,11 @@ else:
 # load model
 model = torch.load(args.model, map_location=map_location)
 
+
 # classify
 with torch.no_grad():
     model.eval() # prevent dropout
-    log_ps = model.forward(image)
+    log_ps = output(model.forward(image))
     ps = torch.exp(log_ps)
 
 # get topk
@@ -62,8 +70,11 @@ else:
 # process topk
 top_probs, top_classes = top_probs.tolist()[0], top_classes.tolist()[0]
 # get top names from top classes
-if model.cat_to_idx:
-    data.set_index_to_label(model.cat_to_idx)
+try:
+    if model.cat_to_idx:
+        data.set_index_to_label(model.cat_to_idx)
+except AttributeError:
+    pass
 top_names = [data.get_name(index=cls) for cls in top_classes]
 
 # inform user of results

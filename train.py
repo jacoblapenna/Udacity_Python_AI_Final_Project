@@ -45,7 +45,7 @@ else:
 if os.path.isdir("/root/opt/models"):
     pass
 else:
-    os.mkdir("~/opt/models")
+    os.mkdir("/root/opt/models")
 if args.save_dir:
     if "/root/opt/models" in args.save_dir:
         save_path = args.save_dir
@@ -104,7 +104,7 @@ validator = Validator(data.valloader, device)
 with active_session():
     ## perform training
     # run through each epoch
-    for epoch in range(epochs):
+    for epoch in range(1:epochs + 1):
         print(f"{time.strftime('%H:%M:%S', time.localtime())} - Training network on epoch {epoch}...")
         trainer.train()
         print(f"{time.strftime('%H:%M:%S', time.localtime())} - Validating network on epoch {epoch}...")
@@ -114,7 +114,7 @@ with active_session():
         tl = trainer.training_losses[-1]
         vl = validator.validation_losses[-1]
         a = validator.accuracies[-1]
-        print(f"{time.strftime('%H:%M:%S', time.localtime())} - Epoch {epoch} results: training_loss={tl}, validation_loss={vl}, accuracy={a}")
+        print(f"{time.strftime('%H:%M:%S', time.localtime())} - Epoch {epoch + 1} results: training_loss={tl}, validation_loss={vl}, accuracy={a}")
 
         # save every checkpoint step
         if checkpoint:
