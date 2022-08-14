@@ -5,6 +5,12 @@ import argparse
 
 from Data import Data
 
+"""
+NOTES:
+Can't download pth files from the server of upload to github. Found AlexNet accuracy at 74.75% with 30 epochs, learnrate of 0.001 and SGD momentum of 0.9.
+
+"""
+
 # setup arguments
 parser = argparse.ArgumentParser(description="Classify input image.")
 parser.add_argument("-m", "--model", type=str, required=True,
@@ -13,6 +19,8 @@ parser.add_argument("-i", "--impath", type=str,
                     help="The path of the image to be classified. For example '/test/1/image_06743.jpg'")
 parser.add_argument("-k", "--top_k", type=int,
                     help="The number of top-k probabilities to return from the classification. For example 5")
+parser.add_argument("-c", "--category_names", type=str,
+                    help="Allows for alternative mapping of classes to names. For example 'class_to_names.json'")
 parser.add_argument("-g", "--gpu", type=bool,
                     help="Whether to attempt to use the GPU for classification or not. NOTE: this flag is deppricated and doesn't do anything, if a GPU is available, it will be used automatically.")
 
@@ -70,17 +78,14 @@ else:
 # process topk
 top_probs, top_classes = top_probs.tolist()[0], top_classes.tolist()[0]
 # get top names from top classes
-try:
-    if model.cat_to_idx:
-        data.set_index_to_label(model.cat_to_idx)
-except AttributeError:
-    pass
+if args.category_names:
+    data.set_label_to_names(args.category_names)
 top_names = [data.get_name(index=cls) for cls in top_classes]
 
 # inform user of results
 roundl = lambda x: round(x, 3)
 if args.top_k and args.top_k > 1:
-    print(f"The top {args.top_k} probabilities are: {map(roundl, top_probs)}, which correspond to the following flowers: {top_names}")
+    print(f"The top {args.top_k} probabilities are: {list(map(roundl, top_probs))}, which correspond to the following flowers: {top_names}")
 else:
     print(f"The flower was classified as {top_names[0]} with {roundl(top_probs[0])} probability.")
 success_string = f"The actual flower was labeled {label}, "

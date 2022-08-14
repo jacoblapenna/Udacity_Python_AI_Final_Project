@@ -18,11 +18,13 @@ parser.add_argument("data_dir", type=str,
 parser.add_argument("-s", "--save_dir", type=str,
                     help="The directory and filename to save the trained model. For example: '~/opt/models/model_name.pth'")
 parser.add_argument("-a", "--arch", type=str,
-                    help="The architecture to train. The following pytorch architectures are available: 'alexnet', 'vgg11', 'vgg13', 'vgg16', 'vgg19', 'resnet18', 'resnet34', 'resnet50'")
+                    help="The architecture to train. The following pytorch architectures are available: 'alexnet', 'vgg11', 'vgg13', 'vgg16', 'vgg19'")
 parser.add_argument("-lr", "--learn_rate", type=float,
                     help="The learning rate for training the network. For example: 0.003")
 parser.add_argument("-m", "--momentum", type=float,
                     help="The momentum to use with the SGD optimizer. For example: 0.9")
+parser.add_argument("-u", "--hidden_units", type=int,
+                    help="The number of neurons in before output. For example: 512")
 parser.add_argument("-e", "--epochs", type=int,
                     help="The number of epochs to use. For example: 30")
 parser.add_argument("-c", "--checkpoint_step", type=int,
@@ -60,17 +62,28 @@ except FileNotFoundError:
 data = Data(data_path)
 
 # get model
-if args.arch not in ['alexnet', 'vgg11', 'vgg13', 'vgg16', 'vgg19', 'resnet18', 'resnet34', 'resnet50']:
+if args.arch not in ['alexnet', 'vgg11', 'vgg13', 'vgg16', 'vgg19']:
     raise Exception("Invalid architecture! Try -h for help.")
 model = eval(f"models.{args.arch}(pretrained=True)")
+
+#print(model)
 
 # freeze features
 for param in model.parameters():
     # turn off tracking for gradient to freeze parameters
     param.requires_grad = False
 
-# modify classifier to match number of possible classesifications
-model.classifier[-1].out_features = data.n_outputs
+# modify classifier
+linear_layers = [i for i, layer in enumerate(model.classifier) if type(layer) == torch.nn.Linear]
+model.classifier[linear_layers[-1]].out_features = data.n_outputs
+try:
+    if args.hidden_units and len(linear_layers) >= 2:
+        model.classifier[linear_layers[-2]].out_features = args.hidden_units
+        model.classifier[linear_layers[-1]].in_features = args.hidden_units
+except IndexError:
+    pass
+print(model)
+    
 # make sure classifier is not frozen
 for param in model.classifier.parameters():
     param.requires_grad = True
@@ -104,7 +117,7 @@ validator = Validator(data.valloader, device)
 with active_session():
     ## perform training
     # run through each epoch
-    for epoch in range(1:epochs + 1):
+    for epoch in range(1, epochs + 1):
         print(f"{time.strftime('%H:%M:%S', time.localtime())} - Training network on epoch {epoch}...")
         trainer.train()
         print(f"{time.strftime('%H:%M:%S', time.localtime())} - Validating network on epoch {epoch}...")

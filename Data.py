@@ -50,13 +50,18 @@ class Data:
     def set_index_to_label(self, class_to_idx):
         self._index_to_label = {v : k for k, v in class_to_idx.items()}
     
+    
+    def set_label_to_names(self, json_filename):
+        with open(json_filename, 'r') as f:
+            self._label_to_name = json.load(f)
+    
        
     def get_name(self, label=None, index=None):
         """ return flower name from label or index """
         
-        if label:
+        if label != None:
             return self._label_to_name[label]
-        elif index:
+        elif index != None:
             return self._label_to_name[self._index_to_label[index]]
         else:
             raise KeyError("No label or index key provided!")
